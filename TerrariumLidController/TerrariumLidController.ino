@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include "RTClib.h"
+#include "ConsoleInterface.h"
 
 // ====================== Debug ======================
 constexpr bool DEBUG_SCHEDULE = true;
@@ -37,6 +38,7 @@ constexpr int DURATION_MINUTES = (13 * 60) + 26; // 20 hours (for testing)
 constexpr int FADE_MINUTES = 10; // sunrise and sunset ramp length
 
 RTC_DS3231 rtc;
+ConsoleInterface console(Serial, rtc);
 
 // ====================== Helpers ======================
 
@@ -199,9 +201,11 @@ void setup() {
   Serial.println(now.minute());
 
   Serial.println("--- Main loop starting ---");
+  console.begin();
 }
 
 void loop() {
+  console.update();
   static float filtered = 0.0f;
   static int lastDuty = -1;
   static unsigned long lastStatus = 0;
