@@ -1,3 +1,3 @@
 
 
-[ ] Add in an optional SHT3X component if it exists when the system starts up. Use the Requirements in the Requirements_SH31X.md file.
+[ ] Add in an optional SHT3X component if it exists when the system starts up. Use the Requirements in the Requirements_SHT3X.md file.
