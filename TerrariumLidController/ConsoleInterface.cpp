@@ -29,6 +29,7 @@ void ConsoleInterface::update() {
       inputLength_ = 0;
       inputBuffer_[0] = '\0';
       printPrompt();
+
       continue;
     }
 

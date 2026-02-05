@@ -17,7 +17,6 @@ class ConsoleInterface {
   RTC_DS3231& rtc_;
   char inputBuffer_[kBufferSize];
   size_t inputLength_;
-
   void printPrompt();
   void printHelp();
   void handleCommand(const char* command);
