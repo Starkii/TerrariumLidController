@@ -1,0 +1,7 @@
+profiles:
+  esp32c3:
+    fqbn: esp32:esp32:esp32c3
+    platforms:
+      - platform: esp32:esp32
+    libraries:
+      - RTClib
