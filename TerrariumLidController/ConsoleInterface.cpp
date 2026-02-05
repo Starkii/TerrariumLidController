@@ -4,11 +4,10 @@
 #include <string.h>
 
 ConsoleInterface::ConsoleInterface(Stream& serial, RTC_DS3231& rtc)
-    : serial_(serial), rtc_(rtc), inputBuffer_{0}, inputLength_(0), lastInputMs_(0) {}
+    : serial_(serial), rtc_(rtc), inputBuffer_{0}, inputLength_(0) {}
 
 void ConsoleInterface::begin() {
   serial_.println("Console ready. Type 'help' for commands.");
-  serial_.println("Tip: Commands work with newline/CR, and also auto-run after a short idle timeout.");
   printPrompt();
 }
 
@@ -20,33 +19,24 @@ void ConsoleInterface::update() {
     }
 
     char c = static_cast<char>(incoming);
+    if (c == '\r') {
+      continue;
+    }
 
-    if (c == '\r' || c == '\n') {
-      processBufferedCommand();
+    if (c == '\n') {
+      inputBuffer_[inputLength_] = '\0';
+      handleCommand(inputBuffer_);
+      inputLength_ = 0;
+      inputBuffer_[0] = '\0';
+      printPrompt();
+
       continue;
     }
 
     if (inputLength_ < (kBufferSize - 1)) {
       inputBuffer_[inputLength_++] = c;
-      lastInputMs_ = millis();
     }
   }
-
-  if (inputLength_ > 0 && (millis() - lastInputMs_ >= kCommandIdleTimeoutMs)) {
-    processBufferedCommand();
-  }
-}
-
-void ConsoleInterface::processBufferedCommand() {
-  if (inputLength_ == 0) {
-    return;
-  }
-
-  inputBuffer_[inputLength_] = '\0';
-  handleCommand(inputBuffer_);
-  inputLength_ = 0;
-  inputBuffer_[0] = '\0';
-  printPrompt();
 }
 
 void ConsoleInterface::printPrompt() {
