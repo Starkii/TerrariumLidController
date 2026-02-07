@@ -2,9 +2,10 @@ profiles:
   esp32c3:
     fqbn: esp32:esp32:esp32c3
     platforms:
-      - platform: esp32:esp32
+      - platform: esp32:esp32 (3.3.6)
     libraries:
-      - RTClib
-      - Adafruit SHT31 Library
-      - Adafruit GFX Library
-      - Adafruit SSD1306
+      - RTClib (2.1.4)
+      - Adafruit BusIO (1.17.4)
+      - Adafruit SHT31 Library (2.2.2)
+      - Adafruit GFX Library (1.12.4)
+      - Adafruit SSD1306 (2.5.16)
