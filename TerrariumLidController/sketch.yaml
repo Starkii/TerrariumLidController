@@ -5,3 +5,4 @@ profiles:
       - platform: esp32:esp32
     libraries:
       - RTClib
+      - Adafruit SHT31 Library
