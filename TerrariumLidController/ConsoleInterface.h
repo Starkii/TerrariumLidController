@@ -11,6 +11,7 @@ class ConsoleInterface {
   using ForceOnHandler = void (*)(Stream& serial);
   using ForceOffHandler = void (*)(Stream& serial);
   using Sht3xHandler = void (*)(Stream& serial);
+  using DisplayHandler = void (*)(Stream& serial, const char* args);
 
   ConsoleInterface(Stream& serial, RTC_DS3231& rtc);
 
@@ -22,6 +23,7 @@ class ConsoleInterface {
   void setForceOnHandler(ForceOnHandler handler);
   void setForceOffHandler(ForceOffHandler handler);
   void setSht3xHandler(Sht3xHandler handler);
+  void setDisplayHandler(DisplayHandler handler);
 
  private:
   static constexpr size_t kBufferSize = 64;
@@ -36,6 +38,7 @@ class ConsoleInterface {
   ForceOnHandler forceOnHandler_;
   ForceOffHandler forceOffHandler_;
   Sht3xHandler sht3xHandler_;
+  DisplayHandler displayHandler_;
   void printPrompt();
   void printHelp();
   void handleCommand(const char* command);

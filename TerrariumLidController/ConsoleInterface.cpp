@@ -14,7 +14,8 @@ ConsoleInterface::ConsoleInterface(Stream& serial, RTC_DS3231& rtc)
       debugHandler_(nullptr),
       forceOnHandler_(nullptr),
       forceOffHandler_(nullptr),
-      sht3xHandler_(nullptr) {}
+      sht3xHandler_(nullptr),
+      displayHandler_(nullptr) {}
 
 void ConsoleInterface::begin() {
   serial_.println("Console ready. Type 'help' for commands.");
@@ -43,6 +44,10 @@ void ConsoleInterface::setForceOffHandler(ForceOffHandler handler) {
 
 void ConsoleInterface::setSht3xHandler(Sht3xHandler handler) {
   sht3xHandler_ = handler;
+}
+
+void ConsoleInterface::setDisplayHandler(DisplayHandler handler) {
+  displayHandler_ = handler;
 }
 
 void ConsoleInterface::update() {
@@ -88,6 +93,7 @@ void ConsoleInterface::printHelp() {
   serial_.println("  forceOn         Force LED on (override schedule)");
   serial_.println("  forceOff        Return to schedule timing");
   serial_.println("  sht3x           Show SHT3x status and recent events");
+  serial_.println("  display ...     Display commands (status/on/off/dim/flip/timeout/test)");
 }
 
 void ConsoleInterface::handleCommand(const char* command) {
@@ -191,6 +197,19 @@ void ConsoleInterface::handleCommand(const char* command) {
       sht3xHandler_(serial_);
     } else {
       serial_.println("SHT3x not available.");
+    }
+    return;
+  }
+
+  if (len == 7 && strncmp(command, "display", len) == 0) {
+    if (displayHandler_ != nullptr) {
+      const char* args = end;
+      while (*args != '\0' && isspace(static_cast<unsigned char>(*args))) {
+        ++args;
+      }
+      displayHandler_(serial_, args);
+    } else {
+      serial_.println("Display commands not available.");
     }
     return;
   }

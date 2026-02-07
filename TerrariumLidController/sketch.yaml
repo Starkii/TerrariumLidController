@@ -6,3 +6,5 @@ profiles:
     libraries:
       - RTClib
       - Adafruit SHT31 Library
+      - Adafruit GFX Library
+      - Adafruit SSD1306

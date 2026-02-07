@@ -4,6 +4,9 @@
 
 * Use **SSD1306 OLED over I²C** on the existing I²C bus (shared with DS3231).
 * Default resolution support: **128×64** (also allow 128×32 via config/compile flag).
+* Panel color zones are fixed:
+  * **Top 16 rows (y=0..15)** are **yellow**
+  * **Bottom 48 rows (y=16..63)** are **blue**
 * I²C address support: **0x3C** (primary) and **0x3D** (fallback).
 * Provide a dedicated **display enable GPIO** (power gate or reset) so firmware can fully shut it down for power/EMI reasons.
 * Display update must not disrupt USB-CDC or PWM output.
@@ -55,6 +58,8 @@ Navigation requirement (pick one implementation):
 * Use a **large font** for the primary number on the home screen (brightness or time).
 * Use only monochrome-safe UI elements: icons + 1–2 lines of text.
 * Avoid full-screen inversion or rapid blinking (no strobing).
+* Place **icons, alerts, and warning banners** in the **yellow zone** (`y=0..15`) whenever possible.
+* Place **less critical / routine information** in the **blue zone** (`y=16..63`) whenever possible.
 
 ### 7) Burn-in mitigation
 
@@ -198,6 +203,13 @@ Font assumptions:
 Font L (big numbers): FreeSans24pt7b
 Font M (everything else): FreeSans12pt7b
 
+Color zone note for this specific OLED:
+* **Yellow region:** `y=0..15` (top 16 px)
+* **Blue region:** `y=16..63` (bottom 48 px)
+* Prioritization rule:
+  * **Yellow:** attention items (status icons, warnings, faults, urgent banners)
+  * **Blue:** normal operational data (time, brightness, next event, steady-state info)
+
 ### A) Top status bar (Y = 0..7)
 
 **Icons are 8×8 monochrome bitmaps.**
@@ -333,6 +345,76 @@ static const uint8_t ICON_RTC[8] = {
   0b01000010,
   0b00111100
 };
+
+---
+
+## Implementation Plan (Step-by-Step)
+
+- [x] **Lock dependencies and compile-time config**
+   - Add SSD1306 display libraries to `TerrariumLidController/sketch.yaml` (e.g., Adafruit SSD1306 + GFX).
+   - Add compile-time display config in a new header (`DisplayConfig.h`): width/height (`128x64` default, `128x32` optional), addresses (`0x3C` primary, `0x3D` fallback), refresh interval (`500 ms`), rotation default.
+   - Add constants for the two-tone panel zones: yellow `y=0..15`, blue `y=16..63`.
+
+- [x] **Create optional display module**
+   - Add `DisplayController.h/.cpp` with a minimal API:
+     - `begin(TwoWire&)`, `update(const UiState&, unsigned long nowMs)`, `isPresent()`, `setEnabled(bool)`, `setDimMode(bool)`, `setFlip(bool)`, `toggleFlip()`, `getStatus()`.
+   - Boot-time detection tries `0x3C`, then `0x3D`; if missing, remain headless and non-blocking.
+   - Retry detect every `60s` while headless.
+
+- [x] **Define shared UI state model**
+   - Add a `UiState` struct in a shared header used by both console and display.
+   - Include: brightness %, control mode (POT/SCH/OVR), light on/off, next event string, RTC state, humidity/temperature optional values, watering/temperature alerts, USB power status.
+   - Refactor existing console status output to source data from this single state model.
+
+- [x] **Implement rendering pipeline**
+   - Implement full-screen buffered render with dirty-checking (only push to display when content changes or minute tick changes).
+   - Enforce max refresh rate of `2 Hz`.
+   - Keep rendering work bounded; no blocking delays in render path.
+   - Apply color-priority layout rule:
+     - Yellow zone (`y=0..15`): icons + warnings/fault banners.
+     - Blue zone (`y=16..63`): normal operational information.
+
+- [x] **Implement single-screen layout contract**
+   - Render top status bar icons and right-aligned time in yellow zone.
+   - Render primary brightness block and bar graph in blue zone.
+   - Render status lines and next-event text in blue zone.
+   - Add hard truncation for text fields to avoid overflow.
+
+- [x] **Add persistent orientation (flip)**
+   - Add NVS storage: namespace `ui`, key `oled_flip` (`u8`, 0 normal / 1 inverted).
+   - Load on boot and apply immediately.
+   - Implement `display flip` command with immediate apply (`<=250 ms`) and persisted write.
+   - Add `display status` command to report orientation and detect status/address.
+
+- [x] **Add display power/dim behavior**
+   - Implement `display on|off|dim`.
+   - Implement idle timeout config:
+     - `display timeout dim <min>`
+     - `display timeout off <min>`
+   - Wake from off/dim on potentiometer movement threshold.
+   - If active alerts exist, keep display awake (override power-down).
+
+- [x] **Add burn-in mitigation**
+   - Implement periodic pixel shift (e.g., `+/-1 px` every `30-60s`) for static content.
+   - Keep shifts bounded to avoid clipping key UI elements.
+
+- [x] **Integrate with main loop timing**
+   - Instantiate `DisplayController` in `TerrariumLidController.ino`.
+   - Call `display.update(uiState, millis())` in loop.
+   - Verify no impact on PWM behavior and serial command responsiveness.
+
+- [x] **Factory/self-test mode**
+   - Add a test routine/command to:
+     - Detect and print display address.
+     - Render test pattern + text.
+     - Run 30s stability check while PWM remains active.
+
+- [X] **Validation and acceptance checks**
+   - Confirm headless fallback works when display absent.
+   - Confirm retry detection recovers display if connected after boot.
+   - Confirm layout and warning placement follow yellow/blue zone rules.
+   - Confirm CLI commands function and persist across reboot.
+   - Confirm no regression in RTC, console, SHT3x, and lighting behavior.
 
 
 
